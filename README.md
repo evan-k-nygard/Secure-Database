@@ -31,12 +31,12 @@ Other commands may be added later after minimum viable product is reached.
 
 Expected upcoming additions (roughly in order):
 
-- Finish and test the C++ wrapper over SQLite - class DBManager, used to implement all relevant database operations in a C++ style framework. See dbmanager.h
-- Create and test encrypt(), decrypt(), and hash() wrapper functions over Crypto++, for ease of use and to isolate the functionality that Secure Database will need. sign() and verify() functions may also be added at this stage (see below for more on this)
-- Create command line interface, adding and testing functionality incrementally:
---- Login functionality
---- Read/write functionality
---- Sharing functionality
+* Finish and test the C++ wrapper over SQLite - class DBManager, used to implement all relevant database operations in a C++ style framework. See dbmanager.h
+* Create and test encrypt(), decrypt(), and hash() wrapper functions over Crypto++, for ease of use and to isolate the functionality that Secure Database will need. sign() and verify() functions may also be added at this stage (see below for more on this)
+* Create command line interface, adding and testing functionality incrementally:
+ * Login functionality
+ * Read/write functionality
+ * Sharing functionality
 
 -------------------------------------------------------------------------
 
