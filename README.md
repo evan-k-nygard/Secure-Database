@@ -17,8 +17,8 @@ All user records are encrypted based on their password. However, this requires a
 The anticipated command-line interface is as follows:
 
 * Executable: "securedb -u USERNAME -p PASSWORD -h"
-** -u and -p are both required to log in
-** -h prints out a list of commands, and explains the login procedure
+  * -u and -p are both required to log in
+  * -h prints out a list of commands, and explains the login procedure
 * read NAME : decrypts and prints the contents of record NAME
 * write NAME NEW_CONTENT : deletes the contents of NAME and replaces it with NEW_CONTENT. Creates NAME if it doesn't already exist.
 * delete NAME : deletes NAME
