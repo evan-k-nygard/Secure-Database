@@ -8,7 +8,8 @@
 #include <map>
 #include <set>
 
-typedef std::map<std::string, std::multiset<std::string> > DBTable;
+typedef std::vector< std::multiset<std::string> > DBTable;
+typedef std::vector<std::string> ArgumentList;
 
 class DBManager {
     private:
@@ -21,7 +22,7 @@ class DBManager {
         void store(std::string tbl, std::vector<std::string> args);
 
         // do a "raw" SQL query. Must be a prepared query to ensure security
-        DBTable prepared_query(std::string& q, const std::vector<std::string>& args);
+        DBTable prepared_query(std::string q, const ArgumentList& args);
 
         // wrapper functions for records management
         void create_record(const std::string& n, const std::string& v);
