@@ -31,12 +31,14 @@ Other commands may be added later after minimum viable product is reached.
 
 Expected upcoming additions (roughly in order):
 
-* Finish and test the C++ wrapper over SQLite - class DBManager, used to implement all relevant database operations in a C++ style framework. See dbmanager.h
-* Create and test encrypt(), decrypt(), and hash() wrapper functions over Crypto++, for ease of use and to isolate the functionality that Secure Database will need. sign() and verify() functions may also be added at this stage (see below for more on this)
+* Create internal and external threat models for the DB program, and design best defenses against them
+  * The internal threat model will assume that the attacker Eve has and will make use of access to the database as a valid, authenticated user in order to attack Alice. The external threat assumes that Eve is not a user of the database.
 * Create command line interface, adding and testing functionality incrementally:
   * Login functionality
   * Read/write functionality
   * Sharing functionality
+* If found to be necessary, implement sign() and verify() wrapper functions over Crypto++, for ease of use and to isolate the functionality that Secure Database will need. See cryptowrapper.h
+* Add capabilities to class DBManager as necessary. See dbmanager.h
 
 -------------------------------------------------------------------------
 
