@@ -9,6 +9,7 @@
 #include "cryptopp890/osrng.h"
 #include "cryptopp890/aes.h"
 #include "cryptopp890/modes.h"
+#include "cryptopp890/hkdf.h"
 
 // Convert bytes to string, or vice versa.
 // The algorithm for these functions was taken from a suggestion in the 
@@ -116,6 +117,18 @@ std::string crypto::_impl_details::aes_cbc_decrypt(const std::string& str, const
     return result;
 }
 
+CryptoPP::SecByteBlock crypto::_impl_details::keygen_hkdf_sha3(const std::string& str) {
+    // note: the construction of this function significantly relied on the Crypto++ wiki here:
+    // https://www.cryptopp.com/wiki/HKDF
+
+    CryptoPP::byte result[CryptoPP::AES::DEFAULT_KEYLENGTH];
+    CryptoPP::HKDF<CryptoPP::SHA3_512> hkdf_machine;
+
+    hkdf_machine.DeriveKey(result, sizeof(result), crypto::_impl_details::string_to_bytes(str), str.size(),
+                           NULL, 0, NULL, 0);
+    return CryptoPP::SecByteBlock(result, sizeof(result));
+}
+
 
 
 std::string crypto::hash(const std::string& str) {
@@ -128,4 +141,8 @@ std::string crypto::encrypt(const std::string& str, const CryptoPP::SecByteBlock
 
 std::string crypto::decrypt(const std::string& ct, const CryptoPP::SecByteBlock key) {
     return crypto::_impl_details::aes_cbc_decrypt(ct, key);
+}
+
+CryptoPP::SecByteBlock crypto::keygen(const std::string& str) {
+    return crypto::_impl_details::keygen_hkdf_sha3(str);
 }
