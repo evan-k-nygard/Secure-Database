@@ -54,7 +54,7 @@ A table Keys will exist in the database. Upon creation of a new record, the corr
 * Alice looks up the record key K_r for her record R in the Keys table.
 * Alice decrypts K_r using her master key (which only she knows).
 * Alice sends the decrypted K_r to Eve.
-* Eve encrypts K_r with her master key (which only she knows), and stores the encrypted Kr, along with her identifying and record information, in the Keys table.
+* Eve encrypts K_r with her master key (which only she knows), and stores the encrypted K_r, along with her identifying and record information, in the Keys table.
 
 In this scenario, neither Alice nor Eve see each other's master keys. Assuming the record key K_r does not leak information about any other record keys or the master key, and assuming the transaction is secure, this record sharing method should not reveal the information about any record other than R to Eve or any potential eavesdropping third party.
 
