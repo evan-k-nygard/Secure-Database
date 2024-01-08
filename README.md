@@ -10,7 +10,7 @@ Secure Database is programmed in the C++ language. It uses the SQLite C library 
 
 Each client logs in using their username and password, both of which are stored hashed in the database. Once a client is logged in, they can access their stored data, edit it, and create new data records. Each record is stored under a given name, and thus the record-storage database table only requires two fields for the actual user-accessed data: "name" and "record", although other fields are present to keep track of record IDs, sharing permissions, etc.
 
-All user records are encrypted based on their password. However, this requires a means to share data with other users (and thus decryption keys) without compromising this password. To do this, the password is stored double-hashed using a secure hashing algorithm: the first hash is used as the decryption key, and the second hash is what is stored and visible in the database.
+Each user's password is used to generate their main encryption key. To ensure security, the password is stored double-hashed using a secure hashing algorithm: the first hash is used to generate the key, and the second hash is what is stored and visible in the database.
 
 -------------------------------------------------------------------------
 
@@ -46,9 +46,22 @@ Upcoming design decisions/questions:
 
 Perhaps the biggest design question is how to *securely* enable sharing functionality. Suppose that Alice wants to share a record R with Eve. If all of Alice's records are encrypted with the same key, then if Eve knows how to decrypt and read R, she can decrypt all of Alice's records. Although the program should check Eve's permissions for any record file R_i, defense in depth mandates stronger protections for Alice's data in case Eve attempts to read program memory to access the shared decryption key.
 
-My current hunches towards ensuring security in this regard is to:
-(a) ensure unique keys for each record by building a composite cryptographic key based on multiple factors - for example, the record name, the record id, the password hash, the time of original creation, and so forth
-(b) verify Eve's access to record R by using a private/public key signing mechanism.
+A tentative security scheme to ensure secure sharing functionality follows. Note that this scheme is still in the hypothesis stage, and is therefore subject to change.
 
-Note, however, that (b) raises the problem of how to securely store the private key itself. This is a more difficult problem, especially since this program is shared on a local device - the database is accessible to multiple users.
+To ensure security, two types of symmetric encryption keys are used: "record keys", which are individual to each record, and "master keys", which are individual to each user and are used to encrypt all of the record keys that the user holds. The master key is generated based off of the first hash H(pwd) of the user's salted password and is never stored in the database (the second hash, H(H(pwd)) is what is stored, so even if an attacker has unfettered access to the database, finding the master key would require breaking H). The record keys are securely generated for each individual record.
+
+A table Keys will exist in the database. Upon creation of a new record, the corresponding record key is encrypted with the user's master key and is stored in the database, along with identifying information linking that record key to the user it belongs to. With this in mind, it should be possible for a user Alice to securely share a single record R with another user Eve, without compromising any other records, as follows:
+* Alice looks up the record key K_r for her record R in the Keys table.
+* Alice decrypts K_r using her master key (which only she knows).
+* Alice sends the decrypted K_r to Eve.
+* Eve encrypts K_r with her master key (which only she knows), and stores the encrypted Kr, along with her identifying and record information, in the Keys table.
+
+In this scenario, neither Alice nor Eve see each other's master keys. Assuming the record key K_r does not leak information about any other record keys or the master key, and assuming the transaction is secure, this record sharing method should not reveal the information about any record other than R to Eve or any potential eavesdropping third party.
+
+The design questions this scheme raises are as follows (more may be added):
+* Is the scheme actually secure?
+  * Does K_r leak information about any other keys, record or master?
+  * How to ensure the security and integrity of the K_r handoff and prevent any third parties from snooping?
+  * How to verify Alice and Eve's authenticity throughout the handoff?
+* Since this program involves secure sharing of records among multiple users *on the same machine*, how does Eve re-encrypt K_r? If only one process (belonging to Alice) is being run on the machine, can one ensure that Eve's master key doesn't leak to Alice?
 
