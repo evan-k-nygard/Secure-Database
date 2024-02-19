@@ -9,7 +9,7 @@
 #include <set>
 #include "cryptopp890/secblock.h"
 
-typedef std::vector< std::multiset<std::string> > DBTable;
+typedef std::vector< std::vector<std::string> > DBTable;
 typedef std::vector<std::string> ArgumentList;
 
 /*
@@ -26,7 +26,7 @@ class DB {
         DB(const char* dbname);
         ~DB();
 
-        DBTable* prepared_query(std::string q, const ArgumentList& args);
+        DBTable prepared_query(std::string q, const ArgumentList& args);
 };
 
 /*
@@ -45,6 +45,8 @@ class AuthenticatedDBUser : private DB {
 
         void assert_safe();
 
+        CryptoPP::SecByteBlock get_record_key(const std::string& muser, const std::string& hashed_record_name);
+        void assert_existence(const std::string& muser, const std::string& hashed_record_name);
     public:
         AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain);
         ~AuthenticatedDBUser();
@@ -52,12 +54,23 @@ class AuthenticatedDBUser : private DB {
         void create_record(const std::string& n, const std::string& v);
         std::string retrieve_record(const std::string& n);
         void edit_record(const std::string& n, const std::string& v);
+        void delete_record(const std::string& n);
 
         void share_record(const std::string& n, const std::string& user);
 
         void change_user_password(const std::string& old, const std::string& updated);
 };
 
+class LockedDB : private DB {
+    private:
+        size_t transaction_number;
+        std::string savepoint_start;
+    public:
+        LockedDB(const char* dbname);
+        ~LockedDB();
 
+        DBTable prepared_query(std::string q, const ArgumentList& args);
+        void rollback(size_t n);
+};
 
 #endif
