@@ -111,9 +111,6 @@ AuthenticatedDBUser::AuthenticatedDBUser(const std::string& username_plain, cons
                                     ArgumentList({uname_hash, salted_pwd_hash}));
     
     // make sure that EXACTLY one record matches these critiera
-    std::cout << "uname_hash: " << uname_hash << '\n';
-    std::cout << "salted_pwd_hash: " << salted_pwd_hash << '\n';
-    std::cout << check.size() << '\n';
     if(check.size() != 1) {
         throw std::runtime_error("Could not authenticate");
     }
@@ -177,7 +174,6 @@ void AuthenticatedDBUser::create_record(const std::string& n, const std::string&
 CryptoPP::SecByteBlock AuthenticatedDBUser::get_record_key(const std::string& muser, const std::string& hashed_record_name) {
     DBTable key_info = prepared_query("SELECT * FROM Keys WHERE user=? AND record_name=?",
                                     ArgumentList({muser, hashed_record_name}));
-    std::cout << "successfully executed first statement\n";
     if(key_info.size() != 1) {
         throw std::runtime_error("could not retrieve record");
     }
@@ -207,7 +203,6 @@ std::string AuthenticatedDBUser::retrieve_record(const std::string& n) {
     // retrieve the record
     DBTable entry = prepared_query("SELECT owner, name, record FROM Records WHERE owner=? AND name=?",
                                     ArgumentList({muser, record_name}));
-    std::cout << "successfully executed second statement\n";
     if(entry.size() != 1) {
         throw std::runtime_error("could not retrieve record");
     }
@@ -240,6 +235,7 @@ void AuthenticatedDBUser::delete_record(const std::string& n) {
 }
 
 
+/* NOTE: All LockedDB functionality is purely experimental at this time */
 
 LockedDB::LockedDB(const char* dbname) : DB::DB(dbname) {
     DB::prepared_query("BEGIN EXCLUSIVE TRANSACTION", ArgumentList({}));
