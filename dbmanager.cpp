@@ -11,6 +11,9 @@
 #include "cryptowrapper.h"
 #include "cryptopp890/osrng.h"
 
+DB::DB() {
+    db = NULL;
+}
 
 DB::DB(const char* dbname) {
     // open up a new SQLite3 database by initiating sqlite3* db
@@ -25,6 +28,10 @@ DB::~DB() {
     sqlite3_close(db);
 }
 
+sqlite3* DB::get_db() {
+    return db;
+}
+
 DBTable DB::prepared_query(std::string q, const ArgumentList& args) {
     /*
     * Execute a prepared query with respect to the currently active database.
@@ -37,7 +44,9 @@ DBTable DB::prepared_query(std::string q, const ArgumentList& args) {
         std::runtime_error on failure
     */
     sqlite3_stmt* pstmt;
-    if(sqlite3_prepare_v2(db, q.c_str(), q.size(), &pstmt, NULL) != SQLITE_OK) {
+    int e = sqlite3_prepare_v2(db, q.c_str(), q.size(), &pstmt, NULL);
+    if(e != SQLITE_OK) {
+        std::cerr << "Internal error: " << sqlite3_errmsg(db) << '\n';
         throw std::runtime_error("unable to prepare statement");
     }
     // bind all arguments in the ArgumentList to the query
@@ -86,6 +95,11 @@ DBTable DB::prepared_query(std::string q, const ArgumentList& args) {
 
 }
 
+AuthenticatedDBUser::AuthenticatedDBUser() : DB::DB() {
+    uname_hash = "";
+    salted_pwd_hash = "";
+    lockdown = true;
+}
 
 AuthenticatedDBUser::AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain) : DB::DB("records.db") {
     /*
@@ -172,6 +186,7 @@ void AuthenticatedDBUser::create_record(const std::string& n, const std::string&
 }
 
 CryptoPP::SecByteBlock AuthenticatedDBUser::get_record_key(const std::string& muser, const std::string& hashed_record_name) {
+    
     DBTable key_info = prepared_query("SELECT * FROM Keys WHERE user=? AND record_name=?",
                                     ArgumentList({muser, hashed_record_name}));
     if(key_info.size() != 1) {
@@ -231,7 +246,13 @@ void AuthenticatedDBUser::delete_record(const std::string& n) {
     assert_existence(muser, record_name);
 
     DB::prepared_query("DELETE FROM Records WHERE owner=? AND name=?",
-                                     ArgumentList({muser, record_name}));
+                        ArgumentList({muser, record_name}));
+    DB::prepared_query("DELETE FROM Keys WHERE user=? AND record_name=?",
+                        ArgumentList({muser, record_name}));
+}
+
+DBTable AuthenticatedDBUser::debug_prepared_query(std::string q, const ArgumentList& args) {
+    return prepared_query(q, args);
 }
 
 

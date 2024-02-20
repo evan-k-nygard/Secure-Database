@@ -22,7 +22,10 @@ typedef std::vector<std::string> ArgumentList;
 class DB {
     private:
         sqlite3* db;
+    protected:
+        sqlite3* get_db(); // for debugging only
     public:
+        DB();
         DB(const char* dbname);
         ~DB();
 
@@ -47,7 +50,11 @@ class AuthenticatedDBUser : private DB {
 
         CryptoPP::SecByteBlock get_record_key(const std::string& muser, const std::string& hashed_record_name);
         void assert_existence(const std::string& muser, const std::string& hashed_record_name);
+        
     public:
+        AuthenticatedDBUser();
+        AuthenticatedDBUser(const AuthenticatedDBUser&) = delete;
+        AuthenticatedDBUser(AuthenticatedDBUser&&);
         AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain);
         ~AuthenticatedDBUser();
 
@@ -59,9 +66,15 @@ class AuthenticatedDBUser : private DB {
         void share_record(const std::string& n, const std::string& user);
 
         void change_user_password(const std::string& old, const std::string& updated);
+
+        DBTable debug_prepared_query(std::string q, const ArgumentList& args);
 };
 
 class LockedDB : private DB {
+    // This class is intended to handle transactions in a multithreaded
+    // environment. It is currently in-process and should not be used at this
+    // time. The current program main.cpp currently assumes it is the only
+    // process
     private:
         size_t transaction_number;
         std::string savepoint_start;

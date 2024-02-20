@@ -20,7 +20,13 @@ int main(int argc, char** argv) {
     std::cout << "Password: ";
     std::string pwd = get_input_wo_newline();
     
+    // Sign the user in and create a database manager
+    // NOTE: upon a failed sign-in, the constructor will throw an exception
+    // and terminate the program. A TODO item is to handle the exception
+    // more cleanly.
     AuthenticatedDBUser manager(uname, pwd);
+    std::cout << "Successfully signed in. Hello, " << uname << "!\n";
+
     bool running = true;
     while(running) {
         std::cout << "> ";
@@ -38,31 +44,70 @@ int main(int argc, char** argv) {
         std::string recordName;
         std::string recordContent;
         std::string record;
+
+        // these variables are used only in the DELETE case
+        // defining them here to avoid errors
+        bool gotResponse = false;
+        bool affirmDeletion = false;
+        
         switch(type) {
             case QUIT:
                 running = false;
                 break;
             case READ:
                 recordName = args[0];
-                record = manager.retrieve_record(recordName);
-                std::cout << "Record '" << recordName << "':\n--------\n" << record << "\n--------\n";
+                try {
+                    record = manager.retrieve_record(recordName);
+                    std::cout << "Record '" << recordName << "':\n--------\n" << record << "\n--------\n";
+                } catch(std::exception& e) {
+                    std::cerr << "Error reading record: " << e.what() << '\n';
+                }
                 break;
             case WRITE:
                 recordName = args[0];
                 recordContent = args[1];
                 // TODO differentiate between when record exists vs it doesn't
-                try {
+                try { // if the record doesn't exist, create it
                     manager.create_record(recordName, recordContent);
                 } catch(...) {
-                    manager.edit_record(recordName, recordContent);
+                    try { // if the record DOES exist, create_record throws
+                        // an exception. Catch the exception and edit the
+                        // already existing record instead
+                        manager.edit_record(recordName, recordContent);
+                        std::cout << "Record '" << recordName << "' written\n";
+                    } catch(std::exception& e) {
+                        std::cerr << "Error writing record: " << e.what() << '\n';
+                    }
                 }
-                std::cout << "Record '" << recordName << "' written\n";
                 break;
             case DELETE:
                 recordName = args[0];
-                // TODO write affirmative function and confirm
-                manager.delete_record(recordName);
-                std::cout << "Record '" << recordName << "' deleted\n";
+                while(!gotResponse) {
+                    std::cout << "Are you sure you want to delete?\n";
+                    std::cout << "[y/n]: ";
+                    std::string affirm;
+                    std::getline(std::cin, affirm);
+                    if(affirm == "y") {
+                        gotResponse = true;
+                        affirmDeletion = true;
+                    } else if(affirm == "n") {
+                        gotResponse = true;
+                        affirmDeletion = false;
+                    } else {
+                        std::cout << "Sorry, please enter 'y' or 'n'.\n";
+                    }
+                }
+                if(affirmDeletion) {
+                    try {
+                        manager.delete_record(recordName);
+                    } catch(std::exception& e) {
+                        std::cerr << "Error on deletion: " << e.what() << '\n';
+                        continue;
+                    }
+                    std::cout << "Record '" << recordName << "' deleted\n";
+                } else {
+                    std::cout << "Canceling deletion\n";
+                }
                 break;
             case SHARE:
                 std::cout << "Sorry! This functionality has not yet been implemented.\n";
@@ -72,8 +117,9 @@ int main(int argc, char** argv) {
                 break;
             default:
                 assert(false); // we should never reach this point
-                std::cout << "Unrecognzied token\n";
+                std::cerr << "Unrecognzied token\n";
         }
+    
     }
     return 0;
 }
