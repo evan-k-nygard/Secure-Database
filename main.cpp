@@ -20,12 +20,15 @@ int main(int argc, char** argv) {
     std::cout << "Password: ";
     std::string pwd = get_input_wo_newline();
     
-    // Sign the user in and create a database manager
-    // NOTE: upon a failed sign-in, the constructor will throw an exception
-    // and terminate the program. A TODO item is to handle the exception
-    // more cleanly.
-    AuthenticatedDBUser manager(uname, pwd);
-    std::cout << "Successfully signed in. Hello, " << uname << "!\n";
+    
+    AuthenticatedDBUser manager;
+    try {
+        manager = std::move(AuthenticatedDBUser(uname, pwd));
+        std::cout << "Successfully signed in. Hello, " << uname << "!\n";
+    } catch(...) {
+        std::cerr << "Failed to sign in\n";
+        return 1;
+    }
 
     bool running = true;
     while(running) {

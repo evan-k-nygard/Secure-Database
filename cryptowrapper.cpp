@@ -117,7 +117,7 @@ std::string crypto::_impl_details::aes_cbc_decrypt(const std::string& str, const
     return result;
 }
 
-CryptoPP::SecByteBlock crypto::_impl_details::keygen_hkdf_sha3(const std::string& str) {
+CryptoPP::SecByteBlock crypto::_impl_details::keygen_hkdf_sha3(const std::string& str, const std::string& salt) {
     // note: the construction of this function significantly relied on the Crypto++ wiki here:
     // https://www.cryptopp.com/wiki/HKDF
 
@@ -125,7 +125,7 @@ CryptoPP::SecByteBlock crypto::_impl_details::keygen_hkdf_sha3(const std::string
     CryptoPP::HKDF<CryptoPP::SHA3_512> hkdf_machine;
 
     hkdf_machine.DeriveKey(result, sizeof(result), crypto::_impl_details::string_to_bytes(str), str.size(),
-                           NULL, 0, NULL, 0);
+                           crypto::_impl_details::string_to_bytes(salt), salt.size(), NULL, 0);
     return CryptoPP::SecByteBlock(result, sizeof(result));
 }
 
@@ -143,6 +143,20 @@ std::string crypto::decrypt(const std::string& ct, const CryptoPP::SecByteBlock 
     return crypto::_impl_details::aes_cbc_decrypt(ct, key);
 }
 
-CryptoPP::SecByteBlock crypto::keygen(const std::string& str) {
-    return crypto::_impl_details::keygen_hkdf_sha3(str);
+CryptoPP::SecByteBlock crypto::master_keygen(const std::string& uname, const std::string& pwd) {
+    /*
+    * generate a master key for the user with username "uname", using password
+    * "pwd" and "uname" as the salt
+    */
+    return crypto::_impl_details::keygen_hkdf_sha3(pwd, uname);
+}
+
+std::string crypto::random_token() {
+    /*
+    * Generate a cryptographically secure random hash
+    */
+    CryptoPP::SecByteBlock token(CryptoPP::AES::BLOCKSIZE);
+    CryptoPP::AutoSeededRandomPool rgen;
+    rgen.GenerateBlock(token, token.size());
+    return crypto::hash(crypto::_impl_details::bytes_to_string(token));
 }

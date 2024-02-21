@@ -15,11 +15,13 @@ namespace crypto {
         std::string aes_cbc_decrypt(const std::string& str, const CryptoPP::SecByteBlock key);
         std::string aes_cbc_auth_encrypt(const std::string& str, const CryptoPP::SecByteBlock key);
         std::string aes_cbc_auth_decrypt(const std::string& str, const CryptoPP::SecByteBlock key);
-        CryptoPP::SecByteBlock keygen_hkdf_sha3(const std::string& str);
+        CryptoPP::SecByteBlock keygen_hkdf_sha3(const std::string& str, const std::string& salt);
     }
 
     std::string hash(const std::string& str);
     std::string encrypt(const std::string& str, const CryptoPP::SecByteBlock key);
     std::string decrypt(const std::string& ct, const CryptoPP::SecByteBlock key);
-    CryptoPP::SecByteBlock keygen(const std::string& str);
+    CryptoPP::SecByteBlock master_keygen(const std::string& uname, const std::string& pwd);
+
+    std::string random_token();
 }

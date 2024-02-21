@@ -26,6 +26,9 @@ class DB {
         sqlite3* get_db(); // for debugging only
     public:
         DB();
+        DB(const DB&) = delete;
+        DB(DB&&);
+        DB& operator=(DB&& database);
         DB(const char* dbname);
         ~DB();
 
@@ -50,11 +53,12 @@ class AuthenticatedDBUser : private DB {
 
         CryptoPP::SecByteBlock get_record_key(const std::string& muser, const std::string& hashed_record_name);
         void assert_existence(const std::string& muser, const std::string& hashed_record_name);
-        
+
     public:
         AuthenticatedDBUser();
         AuthenticatedDBUser(const AuthenticatedDBUser&) = delete;
         AuthenticatedDBUser(AuthenticatedDBUser&&);
+        AuthenticatedDBUser& operator=(AuthenticatedDBUser&& database);
         AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain);
         ~AuthenticatedDBUser();
 
