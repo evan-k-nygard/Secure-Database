@@ -1,8 +1,6 @@
-Secure Database v0.1 (IN PROCESS)
+Secure Database
 
 This project was created just for fun and to put my cybersecurity knowledge into practice. It creates a command-line system to access a shared database securely. Each user should be able to have full read-write access into their own records, and can share certain records with other people, but there should be no way for any user A to read or write other users' records that have not been shared with A.
-
-Note that this project is still in process. Therefore, the description below is subject to change. A list of expected upcoming changes can be found at the bottom of this document.
 
 -------------------------------------------------------------------------
 
