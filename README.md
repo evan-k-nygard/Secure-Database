@@ -14,16 +14,17 @@ Each user's password is used to generate their main encryption key. To ensure se
 
 -------------------------------------------------------------------------
 
-The anticipated command-line interface is as follows:
+The command-line interface is as follows:
 
-* Executable: "securedb -u USERNAME -p PASSWORD -h"
-  * -u and -p are both required to log in
-  * -h prints out a list of commands, and explains the login procedure
+* Executable: "securedb"
+  * Upon running the executable, the program will ask for the user's username and password.
 * read NAME : decrypts and prints the contents of record NAME
 * write NAME NEW_CONTENT : deletes the contents of NAME and replaces it with NEW_CONTENT. Creates NAME if it doesn't already exist.
 * delete NAME : deletes NAME
+
+Upcoming command-line features
 * share NAME OTHER_USERNAME : allows OTHER_USERNAME read access to NAME's record
-* help : same functionality as -h in executable
+* help : print help text explaining all commands
 
 Other commands may be added later after minimum viable product is reached.
 
@@ -31,14 +32,10 @@ Other commands may be added later after minimum viable product is reached.
 
 Expected upcoming additions (roughly in order):
 
-* Create internal and external threat models for the DB program, and design best defenses against them
-  * The internal threat model will assume that the attacker Eve has and will make use of access to the database as a valid, authenticated user in order to attack Alice. The external threat assumes that Eve is not a user of the database.
-* Create command line interface, adding and testing functionality incrementally:
-  * Login functionality
-  * Read/write functionality
-  * Sharing functionality
+* Design threat model and security scheme for secure sharing
+* Add sharing functionality to the command-line interface
 * If found to be necessary, implement sign() and verify() wrapper functions over Crypto++, for ease of use and to isolate the functionality that Secure Database will need. See cryptowrapper.h
-* Add capabilities to class DBManager as necessary. See dbmanager.h
+* Add capabilities to class AuthenticatedDBUser as necessary. See dbmanager.h
 
 -------------------------------------------------------------------------
 
@@ -46,7 +43,7 @@ Upcoming design decisions/questions:
 
 Perhaps the biggest design question is how to *securely* enable sharing functionality. Suppose that Alice wants to share a record R with Eve. If all of Alice's records are encrypted with the same key, then if Eve knows how to decrypt and read R, she can decrypt all of Alice's records. Although the program should check Eve's permissions for any record file R_i, defense in depth mandates stronger protections for Alice's data in case Eve attempts to read program memory to access the shared decryption key.
 
-A tentative security scheme to ensure secure sharing functionality follows. Note that this scheme is still in the hypothesis stage, and is therefore subject to change.
+A tentative security scheme to ensure secure sharing functionality follows:
 
 To ensure security, two types of symmetric encryption keys are used: "record keys", which are individual to each record, and "master keys", which are individual to each user and are used to encrypt all of the record keys that the user holds. The master key is generated based off of the first hash H(pwd) of the user's salted password and is never stored in the database (the second hash, H(H(pwd)) is what is stored, so even if an attacker has unfettered access to the database, finding the master key would require breaking H). The record keys are securely generated for each individual record.
 
@@ -56,12 +53,10 @@ A table Keys will exist in the database. Upon creation of a new record, the corr
 * Alice sends the decrypted K_r to Eve.
 * Eve encrypts K_r with her master key (which only she knows), and stores the encrypted K_r, along with her identifying and record information, in the Keys table.
 
-In this scenario, neither Alice nor Eve see each other's master keys. Assuming the record key K_r does not leak information about any other record keys or the master key, and assuming the transaction is secure, this record sharing method should not reveal the information about any record other than R to Eve or any potential eavesdropping third party.
+In this scenario, neither Alice nor Eve see each other's master keys. Assuming the transaction is secure, this record sharing method should not reveal the information about any record other than R to Eve or any potential eavesdropping third party.
 
 The design questions this scheme raises are as follows (more may be added):
-* Is the scheme actually secure?
-  * Does K_r leak information about any other keys, record or master?
-  * How to ensure the security and integrity of the K_r handoff and prevent any third parties from snooping?
-  * How to verify Alice and Eve's authenticity throughout the handoff?
+* How to ensure the security and integrity of the K_r handoff and prevent any third parties from snooping?
+* How to verify Alice and Eve's authenticity throughout the handoff?
 * Since this program involves secure sharing of records among multiple users *on the same machine*, how does Eve re-encrypt K_r? If only one process (belonging to Alice) is being run on the machine, can one ensure that Eve's master key doesn't leak to Alice?
 
