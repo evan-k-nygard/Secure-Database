@@ -53,13 +53,15 @@ class AuthenticatedDBUser : private DB {
 
         CryptoPP::SecByteBlock get_record_key(const std::string& muser, const std::string& hashed_record_name);
         void assert_existence(const std::string& muser, const std::string& hashed_record_name);
-
+        
+        void authenticate(const std::string& username_plain, const std::string& password_plain);
     public:
         AuthenticatedDBUser();
         AuthenticatedDBUser(const AuthenticatedDBUser&) = delete;
         AuthenticatedDBUser(AuthenticatedDBUser&&);
         AuthenticatedDBUser& operator=(AuthenticatedDBUser&& database);
         AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain);
+        AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain, const std::string& dbname);
         ~AuthenticatedDBUser();
 
         void create_record(const std::string& n, const std::string& v);
@@ -72,6 +74,8 @@ class AuthenticatedDBUser : private DB {
         void change_user_password(const std::string& old, const std::string& updated);
 
         DBTable debug_prepared_query(std::string q, const ArgumentList& args);
+
+        bool record_exists(const std::string& n);
 };
 
 class LockedDB : private DB {

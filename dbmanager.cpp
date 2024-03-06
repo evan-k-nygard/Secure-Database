@@ -111,18 +111,8 @@ DBTable DB::prepared_query(std::string q, const ArgumentList& args) {
 
 }
 
-AuthenticatedDBUser::AuthenticatedDBUser() : DB::DB() {
-    /*
-    * Initialize an AuthenticatedDBUser. At this point, no operations will
-    * work; the object must be fully populated using the move constructor
-    * and assignment operator
-    */
-    uname_hash = "";
-    salted_pwd_hash = "";
-    lockdown = true;
-}
 
-AuthenticatedDBUser::AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain) : DB::DB("records.db") {
+void AuthenticatedDBUser::authenticate(const std::string& username_plain, const std::string& password_plain) {
     /*
     * Securely log a user into the database, and empower them to perform all record-keeping operations
     * Calculates a hash of the username, and a salted hash of the password, and checks to see
@@ -155,6 +145,43 @@ AuthenticatedDBUser::AuthenticatedDBUser(const std::string& username_plain, cons
     // that records can be read.
     lockdown = false;
     master_key = crypto::master_keygen(uname_hash, keygenerator);
+}
+
+AuthenticatedDBUser::AuthenticatedDBUser() : DB::DB() {
+    /*
+    * Initialize an AuthenticatedDBUser. At this point, no operations will
+    * work; the object must be fully populated using the move constructor
+    * and assignment operator
+    */
+    uname_hash = "";
+    salted_pwd_hash = "";
+    lockdown = true;
+}
+
+AuthenticatedDBUser::AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain) : DB::DB("records.db") {
+    /*
+    * Securely log a user into the database, and empower them to perform all record-keeping operations
+    * Calculates a hash of the username, and a salted hash of the password, and checks to see
+    * if exactly one of these records is in the database, the class finishes the initialization
+    * process such that all accesses can be appropriately performed.
+    *
+    * @arguments 
+    * ~ username_plain: The *plaintext* username for the intended user
+    * ~ password_plain: The *plaintext* password for the intended user
+    * @results Successful initialization on valid authentication; exception on 
+    * invalid authentication
+    */
+
+    authenticate(username_plain, password_plain);
+}
+
+AuthenticatedDBUser::AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain, const std::string& dbname) : DB::DB(dbname.c_str()) {
+    /*
+    * Same as above, but logs a user into a different database
+    * THIS FUNCTION IS FOR TEST PURPOSES ONLY
+    */
+
+    authenticate(username_plain, password_plain);
 }
 
 AuthenticatedDBUser::AuthenticatedDBUser(AuthenticatedDBUser&& database) : DB::DB(std::move(database)) {
@@ -267,6 +294,15 @@ void AuthenticatedDBUser::assert_existence(const std::string& muser, const std::
                                     ArgumentList({muser, hashed_record_name}));
     if(entry.size() != 1) {
         throw std::runtime_error("could not retrieve record");
+    }
+}
+
+bool AuthenticatedDBUser::record_exists(const std::string& n) {
+    try {
+        assert_existence(crypto::hash(uname_hash), crypto::hash(n));
+        return true;
+    } catch(...) {
+        return false;
     }
 }
 
