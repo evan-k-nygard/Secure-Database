@@ -1,14 +1,17 @@
 # Based off the GNU Make tutorial: https://www.gnu.org/software/make/manual/make.html#Introduction
 
-db_objects = main.o dbmanager.o cryptowrapper.o
-parser_obj = parsecmd.o
+db_objects = dbmanager.o cryptowrapper.o
+main_objs = main.o parsecmd.o
 cppstd = -std=c++14
+db_libraries = -l sqlite3 cryptopp890/libcryptopp.a
 
-securedb : $(db_objects) $(parser_obj)
-	g++ $(cppstd) $(db_objects) $(parser_obj) -o securedb -l sqlite3 cryptopp890/libcryptopp.a
+All : runtests securedb
 
 runtests : tests.o $(db_objects)
-	g++ $(cppstd) tests.o $(db_objects)
+	g++ $(cppstd) tests.o $(db_objects) $(db_libraries) -o runtests
+
+securedb : $(main_objs) $(db_objects)
+	g++ $(cppstd) $(main_objs) $(db_objects) $(db_libraries) -o securedb 
 
 main.o : main.cpp dbmanager.h cryptowrapper.h parsecmd.h
 	g++ $(cppstd) -c main.cpp
