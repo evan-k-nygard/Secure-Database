@@ -14,6 +14,8 @@ std::string commandTypeToString(CommandType type) {
             return "delete";
         case SHARE:
             return "share";
+        case RECORDLIST:
+            return "list";
         case HELP:
             return "help";
         case QUIT:
@@ -45,6 +47,9 @@ Command::Command(const std::string& cmd) {
             } else if(token == "share") {
                 type = SHARE;
                 expectedArgs = 2;
+            } else if(token == "list") {
+                type = RECORDLIST;
+                expectedArgs = 0;
             } else if(token == "help") {
                 type = HELP;
                 expectedArgs = 0;

@@ -229,6 +229,23 @@ void AuthenticatedDBUser::assert_safe() {
     }
 }
 
+int AuthenticatedDBUser::record_match(const std::string& n) {
+    /*
+    * Confirm that the user owns record with name n
+    */
+
+    std::string muser = crypto::hash(uname_hash);
+    DBTable check = prepared_query("SELECT record_name FROM Keys WHERE user=?", ArgumentList({muser}));
+
+    int result = 0;
+    for(size_t i = 0; i < check.size(); i++) {
+        if(crypto::decrypt(check[i][0], master_key) == n) {
+            result++;
+        }
+    }
+    return result;
+}
+
 void AuthenticatedDBUser::create_record(const std::string& n, const std::string& v) {
     /*
     * Create a new record with the current user as the owner. The new record
@@ -240,30 +257,38 @@ void AuthenticatedDBUser::create_record(const std::string& n, const std::string&
     generator.GenerateBlock(newKey, newKey.size());
 
     // store key in Keys database table
-    std::string muser = crypto::hash(uname_hash);
-    std::string record_name = crypto::hash(n); // TODO ensure no conflicts if multiple users have same record name
+    /*std::string muser = crypto::hash(uname_hash);
+    // std::string record_name = crypto::hash(n); // TODO ensure no conflicts if multiple users have same record name
     DBTable check = prepared_query("SELECT * FROM Keys WHERE user=? AND record_name=?",
                                     ArgumentList({muser, record_name}));
     
     // confirm that no records under user's name currently exist
     if(check.size() > 0) {
         throw std::runtime_error("Could not create record: record already exists");
+    }*/
+    int numRecords = record_match(n);
+    if(numRecords != 0) {
+        throw std::runtime_error("Could not create record: record already exists");
     }
 
     // encrypt the record key newKey with the user's master_key and place
     // it in the Keys table
+    // * the following two lines are new *
+    std::string muser = crypto::hash(uname_hash);
+    std::string record_id = crypto::hash(n);
+    std::string record_name = crypto::encrypt(n, master_key);
+
+    // continue
     std::string key_encrypt = crypto::encrypt(crypto::_impl_details::bytes_to_string(newKey), master_key);
-    prepared_query("INSERT INTO Keys (user, record_name, key) VALUES (?, ?, ?)", 
-                   ArgumentList({muser, record_name, key_encrypt}));
+    prepared_query("INSERT INTO Keys (user, record_name, record_identifier, key) VALUES (?, ?, ?, ?)", 
+                   ArgumentList({muser, record_name, record_id, key_encrypt}));
     
     // encrypt owner, n, and v with newKey before adding to the Records table
-    std::string hashedOwner = muser;
-    std::string hashedN = crypto::hash(n);
     std::string encryptedV = crypto::encrypt(v, newKey);
 
     // add encrypted values to Records database table
     prepared_query("INSERT INTO Records (owner, name, record) VALUES (?, ?, ?)",
-                    ArgumentList({hashedOwner, hashedN, encryptedV}));
+                    ArgumentList({muser, record_id, encryptedV}));
     
 }
 
@@ -274,14 +299,14 @@ CryptoPP::SecByteBlock AuthenticatedDBUser::get_record_key(const std::string& mu
     */
 
     // retrieve the encrypted key
-    DBTable key_info = prepared_query("SELECT * FROM Keys WHERE user=? AND record_name=?",
+    DBTable key_info = prepared_query("SELECT key FROM Keys WHERE user=? AND record_identifier=?",
                                     ArgumentList({muser, hashed_record_name}));
     
     // ensure that only one such key exists
     if(key_info.size() != 1) {
         throw std::runtime_error("could not retrieve record");
     }
-    std::string encrypted_key = key_info[0][2];
+    std::string encrypted_key = key_info[0][0];
     
     // decrypt the record key using the master key
     std::string record_key_string = crypto::decrypt(encrypted_key, master_key);
@@ -289,21 +314,31 @@ CryptoPP::SecByteBlock AuthenticatedDBUser::get_record_key(const std::string& mu
     return record_key;
 }
 
-void AuthenticatedDBUser::assert_existence(const std::string& muser, const std::string& hashed_record_name) {
-    DBTable entry = prepared_query("SELECT owner, name, record FROM Records WHERE owner=? AND name=?",
-                                    ArgumentList({muser, hashed_record_name}));
-    if(entry.size() != 1) {
+void AuthenticatedDBUser::assert_existence(const std::string& n) {
+    if(record_match(n) < 1) {
         throw std::runtime_error("could not retrieve record");
     }
 }
 
 bool AuthenticatedDBUser::record_exists(const std::string& n) {
     try {
-        assert_existence(crypto::hash(uname_hash), crypto::hash(n));
+        assert_existence(n);
         return true;
     } catch(...) {
         return false;
     }
+}
+
+std::vector<std::string> AuthenticatedDBUser::get_record_names() {
+    std::string muser = crypto::hash(uname_hash);
+    DBTable name_info = prepared_query("SELECT record_name FROM Keys WHERE user=?", ArgumentList({muser}));
+
+    std::vector<std::string> result;
+
+    for(size_t i = 0; i < name_info.size(); i++) {
+        result.push_back(crypto::decrypt(name_info[i][0], master_key));
+    }
+    return result;
 }
 
 std::string AuthenticatedDBUser::retrieve_record(const std::string& n) {
@@ -314,13 +349,13 @@ std::string AuthenticatedDBUser::retrieve_record(const std::string& n) {
 
     // retrieve record key from Keys table (if one exists)
     std::string muser = crypto::hash(uname_hash);
-    std::string record_name = crypto::hash(n);
+    std::string record_id = crypto::hash(n);
     
-    CryptoPP::SecByteBlock record_key = get_record_key(muser, record_name);
+    CryptoPP::SecByteBlock record_key = get_record_key(muser, record_id);
 
     // retrieve the record
     DBTable entry = prepared_query("SELECT owner, name, record FROM Records WHERE owner=? AND name=?",
-                                    ArgumentList({muser, record_name}));
+                                    ArgumentList({muser, record_id}));
     
     // ensure that only one such record exists
     if(entry.size() != 1) {
@@ -339,16 +374,16 @@ void AuthenticatedDBUser::edit_record(const std::string& n, const std::string& v
     */
     // retrieve the record key
     std::string muser = crypto::hash(uname_hash);
-    std::string record_name = crypto::hash(n);
-    CryptoPP::SecByteBlock record_key = get_record_key(muser, record_name);
+    std::string record_id = crypto::hash(n);
+    CryptoPP::SecByteBlock record_key = get_record_key(muser, record_id);
 
     // ensure that the record actually exists
-    assert_existence(muser, record_name);
+    assert_existence(n);
 
     // encrypt the text v and update the record
     std::string new_encrypted_text = crypto::encrypt(v, record_key);
     prepared_query("UPDATE Records SET record=? WHERE owner=? AND name=?",
-                   ArgumentList({new_encrypted_text, muser, record_name}));
+                   ArgumentList({new_encrypted_text, muser, record_id}));
 }
 
 void AuthenticatedDBUser::delete_record(const std::string& n) {
@@ -357,15 +392,15 @@ void AuthenticatedDBUser::delete_record(const std::string& n) {
     * Requires that record n exists and that the current user is n's owner
     */
     std::string muser = crypto::hash(uname_hash);
-    std::string record_name = crypto::hash(n);
+    std::string record_id = crypto::hash(n);
 
-    assert_existence(muser, record_name);
+    assert_existence(n);
 
     // Delete both the record itself and the owner's record key
     DB::prepared_query("DELETE FROM Records WHERE owner=? AND name=?",
-                        ArgumentList({muser, record_name}));
-    DB::prepared_query("DELETE FROM Keys WHERE user=? AND record_name=?",
-                        ArgumentList({muser, record_name}));
+                        ArgumentList({muser, record_id}));
+    DB::prepared_query("DELETE FROM Keys WHERE user=? AND record_identifier=?",
+                        ArgumentList({muser, record_id}));
 }
 
 DBTable AuthenticatedDBUser::debug_prepared_query(std::string q, const ArgumentList& args) {

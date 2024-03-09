@@ -21,6 +21,8 @@ int testInvalidRecordEdit(AuthenticatedDBUser& user, std::string name);
 int testValidRecordDeletion(AuthenticatedDBUser& user, std::string name);
 int testInvalidRecordDeletion(AuthenticatedDBUser& user, std::string name);
 
+int testValidRecordListing(AuthenticatedDBUser& user, std::vector<std::string> expectedList);
+
 
 void resetDatabase();
 void resetUser1();
@@ -74,6 +76,9 @@ int main() {
     if(testInvalidRecordReading(alice, "permanent2") == 1) return 1;
     if(testInvalidRecordReading(bob, "permanent1") == 1) return 1;
 
+    if(testValidRecordListing(alice, std::vector<std::string>({"permanent1"})) == 1) return 1;
+    if(testValidRecordListing(bob, std::vector<std::string>({"permanent2"})) == 1) return 1;
+
     std::cout << "Functionality test 2: record creation\n";
     // confirm successful creation of new records X, Y as users A and B respectively
     // confirm new records are accurately paired to their owners
@@ -86,8 +91,10 @@ int main() {
     // intendend functionality here may change. Right now, users cannot create
     // records that have the same name as another user's record
     // This may change; but for now, verify this functionality
-    if(testInvalidRecordCreation(alice, "A2") == 1) return 1;
-    if(testInvalidRecordCreation(bob, "A1") == 1) return 1;
+    if(testValidRecordCreation(alice, "A2") == 1) return 1;
+    if(testValidRecordCreation(bob, "A1") == 1) return 1;
+    if(testValidRecordListing(alice, std::vector<std::string>({"permanent1", "A1", "A2"})) == 1) return 1;
+    if(testValidRecordListing(bob, std::vector<std::string>({"permanent2", "A2", "A1"})) == 1) return 1;
     
     std::cout << "Functionality test 3: record editing\n";
     // confirm successful edits of records X, Y as users A and B
@@ -95,8 +102,8 @@ int main() {
     // confirm unsuccessful edits of nonexistent records by both users
     if(testValidRecordEdit(alice, "A1", "new content") == 1) return 1;
     if(testValidRecordEdit(bob, "A2", "new content") == 1) return 1;
-    if(testInvalidRecordEdit(alice, "A2") == 1) return 1;
-    if(testInvalidRecordEdit(bob, "A1") == 1) return 1;
+    if(testValidRecordEdit(alice, "A2", "other new content") == 1) return 1;
+    if(testValidRecordEdit(bob, "A1", "other new content") == 1) return 1;
     if(testInvalidRecordEdit(alice, "nonexistent") == 1) return 1;
     if(testInvalidRecordEdit(bob, "nonexistent") == 1) return 1;
 
@@ -107,10 +114,13 @@ int main() {
     // confirm unsuccessful reading of record X by A, Y by B
     if(testInvalidRecordDeletion(alice, "nonexistent") == 1) return 1;
     if(testInvalidRecordDeletion(bob, "nonexistent") == 1) return 1;
-    if(testInvalidRecordDeletion(alice, "A2") == 1) return 1;
-    if(testInvalidRecordDeletion(bob, "A1") == 1) return 1;
+    if(testValidRecordDeletion(alice, "A2") == 1) return 1;
+    if(testValidRecordDeletion(bob, "A1") == 1) return 1;
     if(testValidRecordDeletion(alice, "A1") == 1) return 1;
     if(testValidRecordDeletion(bob, "A2") == 1) return 1;
+
+    if(testValidRecordListing(alice, std::vector<std::string>({"permanent1"})) == 1) return 1;
+    if(testValidRecordListing(bob, std::vector<std::string>({"permanent2"})) == 1) return 1;
 
     std::cout << "Functionality tests passed\n";
     std::cout << "All tests passed!\n";
@@ -123,7 +133,7 @@ void resetDatabase() {
     DB db("runtests.db");
     db.prepared_query("drop table Keys", ArgumentList({}));
     db.prepared_query("drop table Records", ArgumentList({}));
-    db.prepared_query("create table Keys(user varchar(256), record_name varchar(512), key varchar(2048));", ArgumentList({}));
+    db.prepared_query("create table Keys(user varchar(640), record_name varchar(2048), record_identifier varchar(640), key varchar(2048));", ArgumentList({}));
     db.prepared_query("create table Records(id int primary key, owner int not null, name varchar(512), record varchar(4096), foreign key(owner) references Users(id))", ArgumentList({}));
     std::cout << "Successfully reset database\n";
 }
@@ -275,4 +285,18 @@ int testInvalidRecordDeletion(AuthenticatedDBUser& user, std::string name) {
     }
 
     return 1;
+}
+
+int testValidRecordListing(AuthenticatedDBUser& user, std::vector<std::string> expectedList) {
+    try {
+        std::vector<std::string> test = user.get_record_names();
+        if(test == expectedList) return 0;
+        else {
+            std::cout << "Failed record listing test: record list differs from expected record\n";
+            return 1;
+        }
+    } catch(std::exception& e) {
+        std::cout << "Failed record listing test: an exception was thrown: " << e.what() << '\n';
+        return 1;
+    }
 }

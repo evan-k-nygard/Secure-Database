@@ -112,6 +112,16 @@ int main(int argc, char** argv) {
                     std::cout << "Canceling deletion\n";
                 }
                 break;
+            case RECORDLIST:
+                try {
+                    std::vector<std::string> names = manager.get_record_names();
+                    for(size_t i = 0; i < names.size(); i++) {
+                        std::cout << names[i] << '\n';
+                    }
+                } catch(std::exception& e) {
+                    std::cerr << "Error on retrieving record names: " << e.what() << '\n';
+                }
+                break;
             case SHARE:
                 std::cout << "Sorry! This functionality has not yet been implemented.\n";
                 break;

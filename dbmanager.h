@@ -52,9 +52,11 @@ class AuthenticatedDBUser : private DB {
         void assert_safe();
 
         CryptoPP::SecByteBlock get_record_key(const std::string& muser, const std::string& hashed_record_name);
-        void assert_existence(const std::string& muser, const std::string& hashed_record_name);
+        void assert_existence(const std::string& n);
         
         void authenticate(const std::string& username_plain, const std::string& password_plain);
+
+        int record_match(const std::string& n);
     public:
         AuthenticatedDBUser();
         AuthenticatedDBUser(const AuthenticatedDBUser&) = delete;
@@ -64,6 +66,7 @@ class AuthenticatedDBUser : private DB {
         AuthenticatedDBUser(const std::string& username_plain, const std::string& password_plain, const std::string& dbname);
         ~AuthenticatedDBUser();
 
+        std::vector<std::string> get_record_names();
         void create_record(const std::string& n, const std::string& v);
         std::string retrieve_record(const std::string& n);
         void edit_record(const std::string& n, const std::string& v);
