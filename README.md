@@ -19,6 +19,7 @@ The command-line interface is as follows:
 * read NAME : decrypts and prints the contents of record NAME
 * write NAME NEW_CONTENT : deletes the contents of NAME and replaces it with NEW_CONTENT. Creates NAME if it doesn't already exist.
 * delete NAME : deletes NAME
+* list : lists the names of all records belonging to the current user
 
 Upcoming command-line features
 * share NAME OTHER_USERNAME : allows OTHER_USERNAME read access to NAME's record
